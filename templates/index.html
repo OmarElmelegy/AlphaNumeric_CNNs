@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Character Recognition</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .drawing-area {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .canvas-wrapper {
+            border: 3px solid #e2e8f0;
+            border-radius: 10px;
+            display: inline-block;
+            background: #f8f9fa;
+            padding: 10px;
+        }
+        
+        #drawingCanvas {
+            border: 2px dashed #cbd5e0;
+            cursor: crosshair;
+            border-radius: 5px;
+            background: white;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            margin: 5px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results-panel {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .prediction-result {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .predicted-char {
+            font-size: 4em;
+            font-weight: bold;
+            color: #4a5568;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .confidence {
+            font-size: 1.2em;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+        
+        .top-predictions {
+            margin-top: 25px;
+        }
+        
+        .top-predictions h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .prediction-char {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        
+        .prediction-confidence {
+            color: #718096;
+            font-weight: 600;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            font-size: 1.1em;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .instructions {
+            background: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 25px;
+        }
+        
+        .instructions h3 {
+            color: #2d3748;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #4a5568;
+        }
+        
+        .instructions li {
+            margin-bottom: 5px;
+        }
+        
+        .model-info {
+            background: #fef7e6;
+            border-left: 4px solid #ed8936;
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 25px;
+            font-size: 0.95em;
+            color: #4a5568;
+        }
+        
+        @media (max-width: 768px) {
+            .drawing-area {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .predicted-char {
+                font-size: 3em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖊️ Handwritten Character Recognition</h1>
+        <p class="subtitle">Draw a digit (0-9) or uppercase letter (A-Z) and let AI recognize it!</p>
+        
+        <div class="instructions">
+            <h3>📝 Instructions:</h3>
+            <ul>
+                <li>Draw a single digit (0-9) or uppercase letter (A-Z) in the canvas</li>
+                <li>Use your mouse or finger to draw clearly</li>
+                <li>Click "Predict" to get the AI's best guess</li>
+                <li>Click "Clear" to start over</li>
+            </ul>
+        </div>
+        
+        <div class="drawing-area">
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="drawingCanvas" width="280" height="280"></canvas>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="predict()">🔍 Predict</button>
+                    <button class="btn btn-secondary" onclick="clearCanvas()">🗑️ Clear</button>
+                    <button class="btn btn-secondary" onclick="debugImage()" style="background: linear-gradient(45deg, #38b2ac, #4fd1c7);">🔬 Debug</button>
+                </div>
+            </div>
+            
+            <div class="results-panel">
+                <div id="loadingDiv" class="loading">
+                    <div class="spinner"></div>
+                    <div>Analyzing your drawing...</div>
+                </div>
+                
+                <div id="resultsDiv" style="display: none;">
+                    <div class="prediction-result">
+                        <div>🎯 Prediction:</div>
+                        <div id="predictedChar" class="predicted-char">?</div>
+                        <div id="confidence" class="confidence">Confidence: 0%</div>
+                    </div>
+                    
+                    <div class="top-predictions">
+                        <h3>📊 Top 3 Predictions:</h3>
+                        <div id="topPredictions"></div>
+                    </div>
+                </div>
+                
+                <div id="initialMessage">
+                    <div style="text-align: center; color: #718096; font-size: 1.1em; margin-top: 50px;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">✏️</div>
+                        <div>Draw something and click "Predict" to see the magic!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="model-info">
+            <strong>🧠 Model Information:</strong> This AI model was trained on the EMNIST dataset using a Convolutional Neural Network (CNN) and can recognize 36 different characters: digits 0-9 and uppercase letters A-Z.
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Set up canvas for drawing
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = getCoordinates(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const [currentX, currentY] = getCoordinates(e);
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            
+            [lastX, lastY] = [currentX, currentY];
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            return [
+                (e.clientX - rect.left) * scaleX,
+                (e.clientY - rect.top) * scaleY
+            ];
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('resultsDiv').style.display = 'none';
+            document.getElementById('initialMessage').style.display = 'block';
+        }
+
+        async function predict() {
+            // Show loading
+            document.getElementById('loadingDiv').style.display = 'block';
+            document.getElementById('resultsDiv').style.display = 'none';
+            document.getElementById('initialMessage').style.display = 'none';
+
+            // Get canvas data as base64
+            const imageData = canvas.toDataURL('image/png');
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                const result = await response.json();
+
+                // Hide loading
+                document.getElementById('loadingDiv').style.display = 'none';
+
+                if (result.success) {
+                    // Show results
+                    document.getElementById('predictedChar').textContent = result.prediction;
+                    document.getElementById('confidence').textContent = 
+                        `Confidence: ${(result.confidence * 100).toFixed(1)}%`;
+
+                    // Show top 3 predictions
+                    const topPredictionsDiv = document.getElementById('topPredictions');
+                    topPredictionsDiv.innerHTML = result.top_3.map(pred => `
+                        <div class="prediction-item">
+                            <span class="prediction-char">${pred.character}</span>
+                            <span class="prediction-confidence">${(pred.confidence * 100).toFixed(1)}%</span>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('resultsDiv').style.display = 'block';
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                document.getElementById('loadingDiv').style.display = 'none';
+                alert('Network error: ' + error.message);
+            }
+        }
+
+        async function debugImage() {
+            // Get canvas data as base64
+            const imageData = canvas.toDataURL('image/png');
+
+            try {
+                const response = await fetch('/debug_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Show the original and processed images side by side
+                    const newWindow = window.open('', '_blank', 'width=800,height=400');
+                    newWindow.document.write(`
+                        <html>
+                        <head><title>Debug Images</title></head>
+                        <body style="margin: 20px; font-family: Arial, sans-serif; background: #f0f0f0;">
+                            <h2>Image Processing Debug</h2>
+                            <div style="display: flex; gap: 20px; align-items: flex-start;">
+                                <div style="text-align: center;">
+                                    <h3>Original Drawing (280x280)</h3>
+                                    <img src="${imageData}" style="border: 2px solid #667eea; border-radius: 5px; background: white;">
+                                </div>
+                                <div style="text-align: center;">
+                                    <h3>Processed for Model (28x28)</h3>
+                                    <img src="${result.debug_image}" style="border: 2px solid #f093fb; border-radius: 5px; width: 280px; height: 280px; image-rendering: pixelated;">
+                                    <p style="color: #666; font-size: 12px;">Scaled up for visibility</p>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `);
+                    newWindow.document.close();
+                } else {
+                    alert('Debug error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Debug network error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
